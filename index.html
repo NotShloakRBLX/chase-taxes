@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chase Taxes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0b0e17;
+      --panel:#0f1422;
+      --panel2:#0b1122;
+      --text:#e9f0ff;
+      --muted:#9fb0c7;
+      --cyan:#22d3ee;
+      --violet:#8b5cf6;
+      --amber:#f59e0b;
+      --green:#22c55e;
+      --red:#ef4444;
+      --glass: linear-gradient( to bottom right, rgba(16,21,40,.78), rgba(12,16,34,.78) ) padding-box,
+               linear-gradient(120deg, rgba(34,211,238,.55), rgba(139,92,246,.55)) border-box;
+    }
+
+    *{ box-sizing:border-box }
+    html,body{ height:100% }
+    body{
+      margin:0; font-family:"Segoe UI", Roboto, system-ui, -apple-system, sans-serif;
+      color:var(--text); background:var(--bg); overflow:auto;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+
+    /* aurora bg */
+    .aurora{ position:fixed; inset:0; z-index:-2; pointer-events:none;
+      background:
+        radial-gradient(1200px 700px at 10% -20%, rgba(34,211,238,.16), transparent 60%),
+        radial-gradient(1200px 800px at 90% 120%, rgba(139,92,246,.16), transparent 60%),
+        radial-gradient(900px 600px at 50% 10%, rgba(34,197,94,.12), transparent 60%),
+        linear-gradient(180deg, #0a0d16 0%, #0b0e17 60%, #0a0d16 100%);
+    }
+    .aurora::before,.aurora::after{ content:""; position:absolute; inset:-30%;
+      background: conic-gradient(from 0turn, rgba(34,211,238,.10), rgba(139,92,246,.10), rgba(34,197,94,.10), rgba(34,211,238,.10));
+      filter: blur(70px); animation: swirl 32s linear infinite }
+    .aurora::after{ animation-direction:reverse; opacity:.6 }
+    @keyframes swirl{ to{ transform:rotate(1turn) } }
+
+    .fade{ transition:opacity .25s ease, transform .25s ease }
+    .hidden{ opacity:0; pointer-events:none }
+    .container{ max-width:1100px; margin:0 auto; padding:28px 18px 100px }
+
+    /* header */
+    .hero{
+      display:flex; align-items:center; justify-content:space-between; gap:14px;
+      padding:18px; border-radius:18px; margin:22px auto 16px; color:#dff3ff;
+      background: linear-gradient( to right, rgba(8,12,24,.72), rgba(10,14,26,.58) );
+      border:1px solid rgba(255,255,255,.06);
+      backdrop-filter: blur(12px);
+    }
+    .brand{
+      font-weight:900; letter-spacing:.5px;
+      background:linear-gradient(90deg,#22d3ee,#8b5cf6);
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+      font-size:clamp(1.4rem,3vw,2rem);
+    }
+    .chip{
+      padding:10px 14px; border-radius:999px; font-weight:600;
+      color:#cfe2ff; background:linear-gradient(120deg,#101631,#0c1226); border:1px solid rgba(255,255,255,.08);
+    }
+
+    .card{
+      border-radius:18px; padding:18px; background:var(--glass); border:2px solid transparent;
+      box-shadow: 0 24px 80px rgba(34,211,238,.18), inset 0 0 0 1px rgba(255,255,255,.03);
+      backdrop-filter: blur(10px); color:var(--text);
+    }
+    .card h2{ margin:6px 0 8px; font-weight:900 }
+    .muted{ color:var(--muted) }
+
+    .btn{
+      display:inline-flex; align-items:center; gap:10px; font-weight:800; cursor:pointer;
+      border-radius:14px; border:1px solid #224770; color:white;
+      background:linear-gradient(#0e1426,#0b1224); padding:12px 16px;
+      transition: transform .08s, box-shadow .2s, filter .2s, opacity .2s;
+      box-shadow: 0 12px 36px rgba(34,211,238,.18);
+      text-decoration:none;
+    }
+    .btn:hover{ filter:saturate(1.06) }
+    .btn:active{ transform:translateY(1px) }
+    .btn[disabled]{ opacity:.6; pointer-events:none }
+    .btn-primary{ border-color:#2b82d4; background:linear-gradient(180deg,#0f4e7c,#0a3353) }
+    .btn-warn{ border-color:#9b1c1c; background:linear-gradient(180deg,#7a1212,#4e0b0b) }
+    .btn-gold{ border-color:#a86c05; background:linear-gradient(180deg,#e9b23b,#c98609); color:#111 }
+
+    .row{ display:flex; flex-wrap:wrap; align-items:center; gap:14px }
+
+    /* ===== overlay + SHEET (modal) ===== */
+    .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.55);
+      opacity:0; pointer-events:none; transition:opacity .25s ease }
+    .overlay.visible{ opacity:1; pointer-events:auto }
+
+    .sheet{
+      position:fixed; left:50%; top:50%; transform:translate(-50%,-50%) scale(.96);
+      width:min(980px,94vw);
+      max-height:calc(100vh - 80px);
+      display:grid; grid-template-rows:auto 1fr auto;
+      border-radius:18px; padding:3px; border:2px solid transparent; background:var(--glass);
+      box-shadow:0 24px 80px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.04);
+      backdrop-filter: blur(10px);
+      opacity:0; pointer-events:none;
+      transition:opacity .25s ease, transform .25s ease, height .25s ease;
+    }
+    .sheet.visible{ opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1) }
+    .sheet-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px 6px }
+    .tabs{ display:flex; gap:8px; flex-wrap:wrap }
+    .tab{ padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(120deg,#0e1536,#0c1228); color:#cfe2ff; font-weight:800; font-size:.9rem }
+    .tab.active{ outline:2px solid var(--cyan); color:#fff }
+    .close-x{
+      background:none; border:none; color:#d1defc; cursor:pointer; font-size:1.2rem; padding:6px 10px; border-radius:8px
+    }
+    .close-x:hover{ background:rgba(255,255,255,.06) }
+
+    .sheet-body{ padding:14px; overflow:auto; opacity:1; transform:translateY(0); transition:opacity .25s, transform .25s }
+    .sheet-body.swap-out{ opacity:0; transform:translateY(8px) }
+    .sheet-foot{ padding:12px 14px; display:flex; justify-content:flex-end; gap:10px; border-top:1px dashed rgba(255,255,255,.08) }
+
+    .panel{ border-radius:16px; padding:16px; background:linear-gradient(160deg,#0e1531,#0b1328); border:1px solid rgba(255,255,255,.08) }
+    .grid{ display:grid; gap:14px; grid-template-columns:repeat(12,1fr) }
+    .span6{ grid-column:span 6 } .span12{ grid-column:span 12 }
+    @media (max-width:860px){ .span6{ grid-column:span 12 } }
+
+    .pill{ display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px;
+      background:linear-gradient(120deg,#0e1531,#0c1228); border:1px solid rgba(255,255,255,.08); color:#cfe2ff; font-weight:700 }
+
+    .field{ display:flex; flex-direction:column; gap:6px }
+    .label{ font-weight:800; color:#cfe2ff }
+    .input{
+      width:100%; padding:12px 12px 12px 14px; border-radius:12px; border:1px solid #213154;
+      background:#0d1735; color:#e8f1ff; font-size:1rem;
+      transition:border-color .2s, box-shadow .2s;
+    }
+    .input:focus{ outline:none; border-color:#22d3ee; box-shadow:0 0 0 4px rgba(34,211,238,.18) }
+    .row2{ display:grid; gap:12px; grid-template-columns:1fr 1fr }
+    @media (max-width:720px){ .row2{ grid-template-columns:1fr } }
+    .help{ color:#9ab0cf; font-size:.9rem }
+
+    .mini{ font-size:.9rem }
+    .req{ color:#ffb6b6; font-weight:800 }
+    .ok{ color:#34d399; font-weight:800 }
+
+    .divider{ height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent); margin:10px 0 6px }
+    .spinner{ width:32px; height:32px; border-radius:50%; border:4px solid rgba(255,255,255,.18); border-top-color:#7dd3fc; animation:spin 1s linear infinite }
+    @keyframes spin { to { transform:rotate(360deg) } }
+    .notice{ padding:12px; border-radius:12px; background:linear-gradient(120deg,#0f1a3b,#0e1733); border:1px solid rgba(255,255,255,.08) }
+    .ico{ width:18px; height:18px }
+
+    /* ================= LOGIN ================= */
+    #login-screen{
+      position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:24px; z-index:10;
+      background: radial-gradient(1200px 700px at 10% -20%, rgba(34,211,238,.14), transparent 60%),
+                  radial-gradient(1200px 800px at 90% 120%, rgba(139,92,246,.14), transparent 60%),
+                  #0b0e17;
+    }
+    .login-shell{
+      width:min(440px, 94vw); border-radius:22px; padding:3px;
+      background: linear-gradient(120deg, #22d3ee, #8b5cf6, #22d3ee);
+      box-shadow: 0 26px 80px rgba(0,0,0,.65), 0 0 120px rgba(34,211,238,.35);
+    }
+    #login-box{
+      border-radius:20px; padding:36px 30px 28px; text-align:center; color:#e8e7ef;
+      background:#0c111f; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+    }
+    .login-title{
+      font-size: clamp(1.8rem, 3.6vw, 2.2rem); font-weight:800; letter-spacing:.3px;
+      background: linear-gradient(90deg, #22d3ee, #8b5cf6 45%, #22d3ee);
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+      margin-bottom:22px;
+    }
+    #login-error{ height:1.2em; margin-bottom:12px; color:#ff6b6b; opacity:0; transition:opacity .3s }
+    .input-group{ position:relative; margin:14px 0 }
+    .input-login{
+      width:100%; padding:14px 14px 14px 50px; border-radius:14px;
+      background:#0e152b; border:1px solid #213154; color:#e5e7eb; font-size:1rem;
+      transition: border-color .2s, box-shadow .2s, background .2s;
+    }
+    .input-login:focus{ outline:none; border-color:#22d3ee; box-shadow:0 0 0 4px rgba(34,211,238,.18); background:#0c1430 }
+    .input-icon{ position:absolute; top:50%; left:14px; transform:translateY(-50%); width:22px; height:22px; filter: drop-shadow(0 2px 4px rgba(34,211,238,.55)) }
+    #login-btn{ width:100%; display:flex; align-items:center; justify-content:center; gap:10px;
+      padding:13px 16px; border-radius:14px; cursor:pointer; background:#0e1426; color:#fff; font-weight:800; border:1px solid #24325f;
+      transition: box-shadow .2s, border-color .2s, transform .05s, filter .2s }
+    #login-btn:hover{ border-color:#22d3ee; box-shadow:0 0 0 4px rgba(34,211,238,.18); filter:saturate(1.08) }
+    #login-btn:active{ transform:translateY(1px) }
+  </style>
+</head>
+<body>
+  <div class="aurora"></div>
+
+  <!-- =================== LOGIN =================== -->
+  <div id="login-screen" class="fade">
+    <div class="login-shell">
+      <div id="login-box">
+        <h2 class="login-title">Welcome to<br/>Chase Taxes</h2>
+
+        <div id="login-error">Invalid credentials</div>
+
+        <div class="input-group">
+          <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#22d3ee" d="M12 13.2a5.2 5.2 0 1 0 0-10.4 5.2 5.2 0 0 0 0 10.4Z"/>
+            <path fill="#8b5cf6" d="M4.2 20.6c0-3.4 3.9-6.2 7.8-6.2s7.8 2.8 7.8 6.2v.2c0 .7-.6 1.2-1.3 1.2H5.5c-.7 0-1.3-.5-1.3-1.2v-.2Z"/>
+          </svg>
+          <input id="username" class="input-login" type="text" placeholder="Username" />
+        </div>
+
+        <div class="input-group">
+          <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#22d3ee" d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2Zm-8-2a3 3 0 1 1 6 0v2H9V7Zm4 9.7V17a1 1 0 1 0-2 0v-.3a2 2 0 1 0 2 0Z"/>
+          </svg>
+          <input id="password" class="input-login" type="password" placeholder="Password" />
+        </div>
+
+        <button id="login-btn">
+          <svg class="input-icon" style="position:static" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#8b5cf6" d="M12 3a1 1 0 0 1 1 1v5h-2V5H6v14h5v-4h2v5a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7Zm8.7 9.3-4-4-1.4 1.4 1.3 1.3H12v2h4.6l-1.3 1.3 1.4 1.4 4-4a1 1 0 0 0 0-1.4Z"/>
+          </svg>
+          Log In
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================== APP =================== -->
+  <div id="app" class="fade hidden">
+    <div class="container">
+      <div class="hero">
+        <div class="brand">Chase Taxes</div>
+        <div class="chip">Next filing: <strong>Aug 13, 2025</strong></div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <p class="muted"><strong>Taxes must be filed <span style="color:#fff">every 2 weeks</span>.</strong> Failure to file will result in penalties.</p>
+      </div>
+
+      <div class="card">
+        <h2>File your latest tax return</h2>
+        <p class="muted">Next filing date: <strong>08/13/2025</strong></p>
+        <div class="row" style="margin-top:14px">
+          <button id="startBtn" class="btn btn-primary">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="#7dd3fc" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm1 7V3.5L19.5 9H15Z"/></svg>
+            Start filing
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- modal -->
+    <div id="overlay" class="overlay"></div>
+    <section id="sheet" class="sheet" aria-modal="true" role="dialog">
+      <header class="sheet-head">
+        <div class="row" style="gap:8px">
+          <button id="closeX" class="close-x" title="Close">&times;</button>
+          <strong>Bi-weekly Tax Return</strong>
+        </div>
+        <div class="tabs">
+          <span class="tab" data-step="overview">Overview</span>
+          <span class="tab" data-step="personal">Personal</span>
+          <span class="tab" data-step="filing">Filing</span>
+          <span class="tab" data-step="submitting">Submitting</span>
+          <span class="tab" data-step="done">Done</span>
+        </div>
+      </header>
+      <div id="sheetBody" class="sheet-body"></div>
+      <footer id="sheetFoot" class="sheet-foot"></footer>
+    </section>
+  </div>
+
+  <!-- =================== TEMPLATES =================== -->
+  <template id="tpl-overview">
+    <div class="grid">
+      <div class="span6">
+        <div class="panel">
+          <h3 style="margin-top:0">What you'll do</h3>
+          <div class="divider"></div>
+          <p class="mini">1) Confirm your personal details. 2) Enter income lines. 3) Sign & submit.</p>
+          <ul class="mini">
+            <li>• Secure, encrypted filing</li>
+            <li>• Auto-total lines and validations</li>
+            <li>• Close anytime — no data saved until submitted</li>
+          </ul>
+        </div>
+      </div>
+      <div class="span6">
+        <div class="panel">
+          <h3 style="margin-top:0">Before you start</h3>
+          <div class="divider"></div>
+          <p class="mini">Have your W-2 / 1099, address, and SSN/ITIN ready.</p>
+          <div class="row" style="margin-top:8px">
+            <span class="pill">ID & SSN/ITIN</span>
+            <span class="pill">Home address</span>
+            <span class="pill">W-2 totals</span>
+            <span class="pill">Schedule D (if any)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-overview-foot">
+    <button class="btn" id="cancelOverview">
+      <svg class="ico" viewBox="0 0 24 24"><path fill="#7dd3fc" d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>
+      Close
+    </button>
+    <button class="btn btn-gold" id="goPersonal">
+      <svg class="ico" viewBox="0 0 24 24"><path fill="#1f2937" d="M6 4h7l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm7 1.5V9h3.5L13 5.5Z"/></svg>
+      File
+    </button>
+  </template>
+
+  <template id="tpl-personal">
+    <div class="panel">
+      <h3 style="margin:0 0 6px">Personal information</h3>
+      <div class="divider"></div>
+
+      <div class="row2">
+        <div class="field">
+          <label class="label">First name & middle initial</label>
+          <input id="firstName" class="input" placeholder="e.g., Shloak A." />
+        </div>
+        <div class="field">
+          <label class="label">Last name</label>
+          <input id="lastName" class="input" placeholder="e.g., Patel" />
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label class="label">Social Security Number or ITIN</label>
+          <input id="ssn" class="input" inputmode="numeric" placeholder="123-45-6789" />
+          <div class="help mini">We mask this in transit and at rest. Auto-formats as you type.</div>
+        </div>
+        <div class="field">
+          <label class="label">Employer Identification Number (optional)</label>
+          <input id="ein" class="input" placeholder="12-3456789" />
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:8px">
+        <label class="label">Home address</label>
+        <input id="addrFull" class="input" list="addressList" placeholder="Start typing your address…" />
+        <datalist id="addressList">
+          <option value="2133 Garden View Lane, Austin, TX 78745"></option>
+          <option value="55 Hudson Yards, New York, NY 10001"></option>
+          <option value="1 Chase Manhattan Plaza, New York, NY 10005"></option>
+          <option value="1600 Amphitheatre Pkwy, Mountain View, CA 94043"></option>
+        </datalist>
+        <div class="help mini">Suggestions will appear; selecting one autofills Street/City/State/ZIP.</div>
+      </div>
+
+      <div class="row2" style="margin-top:8px">
+        <div class="field">
+          <label class="label">Street</label>
+          <input id="addrStreet" class="input" />
+        </div>
+        <div class="field">
+          <label class="label">City</label>
+          <input id="addrCity" class="input" />
+        </div>
+      </div>
+      <div class="row2" style="margin-top:8px">
+        <div class="field">
+          <label class="label">State</label>
+          <input id="addrState" class="input" />
+        </div>
+        <div class="field">
+          <label class="label">ZIP</label>
+          <input id="addrZip" class="input" inputmode="numeric" />
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:10px">
+        <label class="label">Filing status</label>
+        <div class="row" style="flex-wrap:wrap; gap:10px">
+          <label class="pill"><input type="radio" name="status" value="single" checked> Single</label>
+          <label class="pill"><input type="radio" name="status" value="hoh"> Head of household</label>
+          <label class="pill"><input type="radio" name="status" value="mfj"> Married filing jointly</label>
+          <label class="pill"><input type="radio" name="status" value="qss"> Qualifying surviving spouse</label>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-personal-foot">
+    <button class="btn" id="cancelFromPersonal">
+      <svg class="ico" viewBox="0 0 24 24"><path fill="#7dd3fc" d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>
+      Cancel
+    </button>
+    <button class="btn btn-gold" id="toFiling">
+      <svg class="ico" viewBox="0 0 24 24"><path fill="#1f2937" d="M8 5v14l11-7L8 5z"/></svg>
+      Continue
+    </button>
+  </template>
+
+  <template id="tpl-cancel-confirm">
+    <div class="panel">
+      <h3 style="margin:2px 0 8px">Cancel filing?</h3>
+      <div class="divider"></div>
+      <p class="mini">Are you sure you want to cancel the filing process?</p>
+    </div>
+  </template>
+
+  <template id="tpl-cancel-foot">
+    <button class="btn" id="backToForm">Back</button>
+    <button class="btn btn-warn" id="confirmCancel">
+      <svg class="ico" viewBox="0 0 24 24"><path fill="#fde0e0" d="M12 3 1 21h22L12 3zm1 6v6h-2V9h2zm0 8v2h-2v-2h2z"/></svg>
+      Cancel filing
+    </button>
+  </template>
+
+  <template id="tpl-filing">
+    <div class="panel">
+      <h3 style="margin:0 0 6px">Filing information</h3>
+      <div class="divider"></div>
+
+      <div class="row2">
+        <div class="field">
+          <label class="label">1a — Total amount from Form(s) W-2, box 1 <span class="muted">(optional)</span></label>
+          <input id="l1a" class="input amt" type="number" step="0.01" value="0" />
+        </div>
+        <div class="field">
+          <label class="label">1b — Household employee wages not on W-2 <span class="muted">(optional)</span></label>
+          <input id="l1b" class="input amt" type="number" step="0.01" value="0" />
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label class="label">1c — Tip income not on line 1a <span class="muted">(optional)</span></label>
+          <input id="l1c" class="input amt" type="number" step="0.01" value="0" />
+        </div>
+        <div class="field">
+          <label class="label">1d — Medicaid waiver payments not on W-2 <span class="muted">(optional)</span></label>
+          <input id="l1d" class="input amt" type="number" step="0.01" value="0" />
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label class="label">1e — Taxable dependent care from Form 2441, line 26 <span class="muted">(optional)</span></label>
+          <input id="l1e" class="input amt" type="number" step="0.01" value="0" />
+        </div>
+        <div class="field">
+          <label class="label">1f — Employer-provided adoption benefits from Form 8839, line 29 <span class="muted">(optional)</span></label>
+          <input id="l1f" class="input amt" type="number" step="0.01" value="0" />
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label class="label">1g — Wages from Form 8919, line 6 <span class="muted">(optional)</span></label>
+          <input id="l1g" class="input amt" type="number" step="0.01" value="0" />
+        </div>
+        <div class="field">
+          <label class="label">1h — Other earned income (see instructions) <span class="muted">(optional)</span></label>
+          <input id="l1h" class="input amt" type="number" step="0.01" value="0" />
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:8px">
+        <label class="label">1z — Add lines 1a through 1h <span class="req">(required)</span></label>
+        <input id="l1z" class="input" type="number" step="0.01" value="0.00" />
+        <div class="help mini">You can edit this number. It will auto-sum while you haven't typed in it.</div>
+      </div>
+
+      <div class="row2" style="margin-top:8px">
+        <div class="field">
+          <label class="label">2a — Tax-exempt interest <span class="req">(required)</span></label>
+          <input id="l2a" class="input amtR" type="number" step="0.01" value="0.00" />
+        </div>
+        <div class="field">
+          <label class="label">2b — Taxable interest <span class="req">(required)</span></label>
+          <input id="l2b" class="input amtR" type="number" step="0.01" value="0.00" />
+        </div>
+      </div>
+
+      <div class="row2" style="margin-top:8px">
+        <div class="field">
+          <label class="label">7 — Capital gain or (loss). Attach Schedule D if required. <span class="req">(required)</span></label>
+          <input id="l7" class="input amtR" type="number" step="0.01" value="0.00" />
+        </div>
+        <div class="field">
+          <label class="label">8 — Additional income from Schedule 1, line 10 <span class="req">(required)</span></label>
+          <input id="l8" class="input amtR" type="number" step="0.01" value="0.00" />
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:8px">
+        <label class="label">9 — Add lines 1z, 2b, 7 and 8. <strong>This is your total income.</strong> <span class="req">(required)</span></label>
+        <input id="l9" class="input" type="number" step="0.01" value="0.00" />
+      </div>
+
+      <div class="notice" style="margin-top:12px">
+        <strong>Form submission and collection of e-signature</strong>
+        <p class="mini" style="margin:.4rem 0 0">
+          By submitting this form, you agree for us to collect your e-signature for your IRS Bi-weekly tax return.
+          Physical paper copies of your tax return(s) must be sent by 3 days after your filing date.
+        </p>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-filing-foot">
+    <button class="btn" id="cancelFromFiling">Cancel</button>
+    <button class="btn btn-gold" id="submitReturn">
+      <svg class="ico" viewBox="0 0 24 24"><path fill="#1f2937" d="M2 21 23 12 2 3v7l15 2-15 2z"/></svg>
+      Submit
+    </button>
+  </template>
+
+  <template id="tpl-loading">
+    <div class="panel" style="text-align:center; padding:60px 16px">
+      <div class="spinner" style="margin:0 auto 14px"></div>
+      <div>Submitting your return…</div>
+    </div>
+  </template>
+
+  <template id="tpl-done">
+    <div class="panel">
+      <div class="row" style="align-items:flex-start; gap:10px">
+        <svg class="ico" viewBox="0 0 24 24"><path fill="#34d399" d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
+        <div>
+          <strong>Your bi-weekly tax return was submitted successfully.</strong>
+          <p class="mini muted" style="margin:.3rem 0 0">
+            We've emailed your confirmation & a copy of your e-signature. Paper copies are due within 3 days of your filing date.
+          </p>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-done-foot">
+    <button class="btn btn-warn" id="exitDone">
+      <svg class="ico" viewBox="0 0 24 24"><path fill="#fde0e0" d="M10 17v-4H3v-2h7V7l5 5-5 5zM19 19H5v2h14a2 2 0 0 0 2-2V5h-2v14z"/></svg>
+      Exit
+    </button>
+  </template>
+
+  <script>
+    /* ===== Login ===== */
+    const loginScreen = document.getElementById('login-screen');
+    const app = document.getElementById('app');
+    const errMsg = document.getElementById('login-error');
+    document.getElementById('login-btn').addEventListener('click', tryLogin);
+    ['username','password'].forEach(id=>{
+      document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
+    });
+    function tryLogin(){
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value;
+      if(u==='shloak' && p==='Sac'){
+        loginScreen.classList.add('hidden');
+        setTimeout(()=>app.classList.remove('hidden'),250);
+      }else{
+        errMsg.style.opacity = '1';
+        setTimeout(()=> errMsg.style.opacity='0', 1800);
+      }
+    }
+
+    /* ===== App / Filing Sheet ===== */
+    const $ = sel => document.querySelector(sel);
+    const sheet   = $('#sheet');
+    const bodyEl  = $('#sheetBody');
+    const footEl  = $('#sheetFoot');
+    const overlay = $('#overlay');
+    const tabs    = () => sheet.querySelectorAll('.tab');
+
+    let currentStep = 'overview';
+    let userEdited1z = false;
+    let lastFormStep = 'personal';
+
+    function openSheet(step='overview'){
+      overlay.classList.add('visible');
+      sheet.classList.add('visible');
+      setStep(step, true);
+    }
+    function closeSheet(){
+      sheet.classList.remove('visible');
+      overlay.classList.remove('visible');
+      setTimeout(()=>setStep('overview', true),250);
+    }
+
+    function swapBody(updateFn){
+      bodyEl.classList.add('swap-out');
+      setTimeout(()=>{
+        updateFn();
+        fitSheet();
+        requestAnimationFrame(()=> bodyEl.classList.remove('swap-out'));
+      },180);
+    }
+
+    function setStep(step, instant=false){
+      currentStep = step;
+      tabs().forEach(t => t.classList.toggle('active', t.dataset.step===step));
+
+      const closeX = $('#closeX');
+      closeX.style.visibility = (step==='submitting') ? 'hidden' : 'visible';
+      closeX.onclick = () => {
+        if (currentStep==='overview') { closeSheet(); }
+        else if (currentStep==='personal' || currentStep==='filing') { showCancelConfirm(); }
+        else if (currentStep==='done') { /* Exit button */ }
+      };
+
+      const render = ()=>{
+        switch(step){
+          case 'overview':
+            bodyEl.innerHTML = $('#tpl-overview').innerHTML;
+            footEl.innerHTML = $('#tpl-overview-foot').innerHTML;
+            $('#cancelOverview').onclick = closeSheet;
+            $('#goPersonal').onclick = ()=>setStep('personal');
+            break;
+          case 'personal':
+            lastFormStep = 'personal';
+            bodyEl.innerHTML = $('#tpl-personal').innerHTML;
+            footEl.innerHTML = $('#tpl-personal-foot').innerHTML;
+            setupAddressAutoFill();
+            setupSSNMask();
+            $('#cancelFromPersonal').onclick = showCancelConfirm;
+            $('#toFiling').onclick = ()=>setStep('filing');
+            break;
+          case 'filing':
+            lastFormStep = 'filing';
+            bodyEl.innerHTML = $('#tpl-filing').innerHTML;
+            footEl.innerHTML = $('#tpl-filing-foot').innerHTML;
+            setupFilingCalcs();
+            $('#cancelFromFiling').onclick = showCancelConfirm;
+            $('#submitReturn').onclick = submitReturn;
+            break;
+          case 'submitting':
+            bodyEl.innerHTML = $('#tpl-loading').innerHTML;
+            footEl.innerHTML = '';
+            break;
+          case 'done':
+            bodyEl.innerHTML = $('#tpl-done').innerHTML;
+            footEl.innerHTML = $('#tpl-done-foot').innerHTML;
+            $('#exitDone').onclick = closeSheet;
+            break;
+        }
+      };
+
+      if(instant){ render(); fitSheet(); return; }
+      swapBody(render);
+    }
+
+    function fitSheet(){
+      sheet.style.height = 'auto';
+      const headH = sheet.querySelector('.sheet-head').offsetHeight;
+      const footH = sheet.querySelector('.sheet-foot').offsetHeight;
+      const maxH  = window.innerHeight - 80;
+      const desired = headH + bodyEl.scrollHeight + footH;
+      const finalH = Math.min(desired, maxH);
+      sheet.style.height = finalH + 'px';
+      bodyEl.style.maxHeight = (finalH - headH - footH - 2) + 'px';
+    }
+    window.addEventListener('resize', fitSheet);
+
+    function showCancelConfirm(){
+      bodyEl.dataset.prev = lastFormStep;
+      swapBody(()=>{
+        bodyEl.innerHTML = $('#tpl-cancel-confirm').innerHTML;
+        footEl.innerHTML = $('#tpl-cancel-foot').innerHTML;
+        $('#backToForm').onclick = ()=> setStep(bodyEl.dataset.prev || 'personal');
+        $('#confirmCancel').onclick = closeSheet;
+      });
+    }
+
+    function setupAddressAutoFill(){
+      const full = $('#addrFull');
+      const street = $('#addrStreet'), city = $('#addrCity'), st = $('#addrState'), zip = $('#addrZip');
+      function tryParse(val){
+        const m = val.match(/^([^,]+),\s*([^,]+),\s*([A-Z]{2})\s+(\d{5})(?:-\d{4})?$/i);
+        if(!m) return;
+        street.value = m[1].trim();
+        city.value   = m[2].trim();
+        st.value     = m[3].toUpperCase();
+        zip.value    = m[4];
+      }
+      full.addEventListener('change', e=>{ tryParse(e.target.value); fitSheet(); });
+      full.addEventListener('input',  ()=> fitSheet());
+    }
+
+    /* ==== SSN mask: ###-##-#### with max 9 digits ==== */
+    function setupSSNMask(){
+      const ssn = $('#ssn');
+      function format(val){
+        const d = val.replace(/\D/g,'').slice(0,9);
+        const p1 = d.slice(0,3);
+        const p2 = d.slice(3,5);
+        const p3 = d.slice(5,9);
+        if(d.length<=3) return p1;
+        if(d.length<=5) return `${p1}-${p2}`;
+        return `${p1}-${p2}-${p3}`;
+      }
+      ssn.addEventListener('input', e=>{
+        const start = e.target.selectionStart;
+        const before = e.target.value;
+        e.target.value = format(e.target.value);
+        // simple caret correction
+        let diff = e.target.value.length - before.length;
+        e.target.setSelectionRange(start + diff, start + diff);
+      });
+    }
+
+    function setupFilingCalcs(){
+      const els = id => document.getElementById(id);
+      const sumInputs = ['l1a','l1b','l1c','l1d','l1e','l1f','l1g','l1h'];
+      const l1z = els('l1z'), l2b = els('l2b'), l7 = els('l7'), l8 = els('l8'), l9 = els('l9');
+
+      userEdited1z = false;
+      l1z.removeAttribute('readonly');
+      l1z.addEventListener('input', ()=>{ userEdited1z = true; recalcTotal(); });
+
+      function val(id){ const v = parseFloat(els(id).value); return isNaN(v)?0:v; }
+      function recalc1z(){
+        if(userEdited1z) return;
+        const s = sumInputs.reduce((a, id)=> a + val(id), 0);
+        l1z.value = s.toFixed(2);
+      }
+      function recalcTotal(){
+        const total = (parseFloat(l1z.value)||0) + val('l2b') + val('l7') + val('l8');
+        l9.value = total.toFixed(2);
+      }
+      sumInputs.forEach(id => els(id).addEventListener('input', ()=>{ recalc1z(); recalcTotal(); }));
+      [l2b,l7,l8].forEach(el => el.addEventListener('input', recalcTotal));
+
+      recalc1z(); recalcTotal();
+      fitSheet();
+    }
+
+    function submitReturn(){
+      setStep('submitting');
+      fitSheet();
+      setTimeout(()=>{ setStep('done'); fitSheet(); }, 4000);
+    }
+
+    // open/close
+    document.getElementById('startBtn').addEventListener('click', () => openSheet('overview'));
+    overlay.addEventListener('click', closeSheet);
+
+    // boot
+    setStep('overview', true);
+  </script>
+</body>
+</html>
